@@ -34,6 +34,6 @@ await writeFile(resolve(contents, 'Info.plist'), `<?xml version="1.0" encoding="
 const iconset = resolve(root, '.local/QuotaDesk.iconset');
 execFileSync('/usr/bin/swift', ['-module-cache-path', resolve(root, '.local/swift-cache'), resolve(root, 'scripts/draw-icon.swift'), iconset], { stdio: 'inherit' });
 execFileSync('/usr/bin/iconutil', ['-c', 'icns', iconset, '-o', resolve(resources, 'QuotaDesk.icns')]);
-execFileSync('/usr/bin/swiftc', ['-O', '-module-cache-path', resolve(root, '.local/swift-cache'), '-framework', 'AppKit', '-framework', 'WebKit', resolve(root, 'desktop/QuotaDesk.swift'), '-o', resolve(contents, 'MacOS/QuotaDesk')], { stdio: 'inherit' });
+execFileSync('/usr/bin/swiftc', ['-O', '-target', `${process.arch === 'arm64' ? 'arm64' : 'x86_64'}-apple-macosx13.0`, '-module-cache-path', resolve(root, '.local/swift-cache'), '-framework', 'AppKit', '-framework', 'WebKit', resolve(root, 'desktop/QuotaDesk.swift'), '-o', resolve(contents, 'MacOS/QuotaDesk')], { stdio: 'inherit' });
 execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', app], { stdio: 'inherit' });
 console.log(`Built ${app}\n${release ? 'Includes Node.js; no personal data or source-machine paths.' : 'Development build uses this Mac’s Node.js.'}`);

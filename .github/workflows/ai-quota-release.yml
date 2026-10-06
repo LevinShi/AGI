@@ -1,0 +1,48 @@
+name: AI Quota macOS release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ai-quota-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: macos-14
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: AI Quota
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          architecture: arm64
+      - name: Test and build portable Apple Silicon app
+        run: |
+          test "$(uname -m)" = arm64
+          npm test
+          npm run build:release
+          npm run export:source
+          codesign --verify --deep --strict 'dist/release/Quota Desk.app'
+          'dist/release/Quota Desk.app/Contents/Resources/runtime/bin/node' --version
+          ditto -c -k --norsrc --noextattr --keepParent dist/source/quota-desk dist/release/QuotaDesk-v0.5.0-source.zip
+          cd dist/release
+          shasum -a 256 QuotaDesk-v0.5.0-macos-arm64.zip QuotaDesk-v0.5.0-source.zip > SHA256SUMS
+      - name: Upload verified artifacts and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag=ai-quota-v0.5.0
+          release_id=$(gh api "repos/$GH_REPO/releases" --jq '.[] | select(.draft == true and .name == "AI Quota v0.5.0 — macOS") | .id' | head -1)
+          if [ -n "$release_id" ]; then
+            gh api --method PATCH "repos/$GH_REPO/releases/$release_id" -f tag_name="$tag" -f target_commitish="$BUILD_COMMIT" -F draft=true > /dev/null
+          elif ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --target "$BUILD_COMMIT" --title 'AI Quota v0.5.0 — macOS' --draft --notes-file RELEASE_NOTES.md
+          fi
+          gh release upload "$tag" dist/release/QuotaDesk-v0.5.0-macos-arm64.zip dist/release/QuotaDesk-v0.5.0-source.zip dist/release/SHA256SUMS --clobber
+          gh release edit "$tag" --notes-file RELEASE_NOTES.md --draft=false --latest

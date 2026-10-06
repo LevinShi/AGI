@@ -81,6 +81,10 @@ App 的前端、Node 后端和额度缓存都在本机运行。后端只监听 `
 
 **是否支持会话跟进、自动处理待办？** 当前版本只做账户额度，不包含会话监控或消息发送。
 
+## 下载入口
+
+[AI Quota v0.5.0 发布与下载](https://github.com/LevinShi/AGI/releases/tag/ai-quota-v0.5.0)。GitHub 的 `AI Quota macOS release` 工作流可在干净的 Apple Silicon 环境中执行测试、构建并发布本版本，使用仓库自带的临时发布凭证，不需要个人 token 或任何 AI 账号登录。
+
 ## 从源码开发与构建
 
 需要 macOS、Xcode Command Line Tools（含 Swift 编译器）、Node.js 22 或以上。运行时没有额外 npm 包依赖。
