@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="quota-token" content="__QUOTA_TOKEN__"><meta name="color-scheme" content="light">
+<title>Quota Desk · 桌面额度</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="preview-note" id="previewNote">账户额度预览 <span>桌面版使用常规窗口，可从 Dock 打开</span></div>
+<main class="app" id="app">
+  <header class="window-header"><div class="window-brand"><span class="logo">Q</span><strong>额度</strong><span class="header-zone">北京时间</span></div><div class="window-controls" hidden><button id="topButton" title="桌面版置顶" aria-label="置顶悬浮窗">⌖</button><button id="compactButton" title="收缩为小条" aria-label="收缩悬浮窗">−</button><button id="hideButton" title="隐藏到菜单栏" aria-label="隐藏悬浮窗">×</button></div></header>
+  <div id="collapsedBar" class="collapsed-bar" hidden></div>
+  <div id="expandedView" class="expanded-view">
+    <div id="demoNotice" class="notice" hidden><strong>示例</strong><span>模拟额度，非套餐规则</span><select id="scenarioSelect" aria-label="选择示例场景"><option value="normal">正常</option><option value="low">余量不足</option><option value="stale">连接中断</option><option value="reset">到点待刷新</option></select><button id="exitDemo" class="text-button">我的账户</button></div>
+    <div id="backendError" class="notice error" hidden></div>
+    <div class="toolbar"><div class="filters" role="group" aria-label="账户筛选"><button data-filter="all" class="active" aria-pressed="true">全部 <span id="accountCount">0</span></button><button data-filter="pinned" aria-pressed="false">已固定</button><button data-filter="attention" aria-pressed="false">需留意 <span id="attentionCount">0</span></button></div><div class="table-actions"><button id="refreshAllButton" class="text-button">刷新全部</button><button id="sortButton" class="icon-button" title="拖动或上下移动调整顺序" aria-label="调整产品顺序">⇅</button><button id="addButton" class="icon-button" title="添加账户" aria-label="添加账户">＋</button><button id="helpButton" class="icon-button" aria-label="查看口径说明">?</button></div></div>
+    <div class="table-scroll"><table aria-label="账户额度"><thead><tr><th scope="col" class="product-col">产品</th><th scope="col">5 小时</th><th scope="col">周</th><th scope="col">月</th><th scope="col" class="reset-col">下次恢复 <small>北京时间 · UTC+8</small></th><th scope="col" class="refresh-col"><span class="sr-only">刷新</span></th></tr></thead><tbody id="accountRows"></tbody></table><div id="empty" class="empty" hidden>没有符合条件的账户</div></div>
+    <footer class="panel-footer"><span id="freshnessSummary"></span><button id="demoButton" class="text-button">示例</button><button id="exportButton" class="text-button">导出</button></footer>
+    <footer class="page-footer"><span id="modeLabel"></span><span>剩余比例 · 拖动 ⠿ 排序</span><a id="designLink" href="/design" target="_blank" rel="noopener">方案 ↗</a></footer>
+  </div>
+</main>
+<div id="previewTray" class="preview-tray" hidden><span>悬浮窗已隐藏</span><button id="restoreButton" class="button">◴ 唤回悬浮窗</button><small>桌面版点击菜单栏 ◴ 唤回</small></div>
+<div id="modalBackdrop" class="backdrop" hidden><section id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div id="modalContent"></div></section></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

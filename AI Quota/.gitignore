@@ -1,0 +1,10 @@
+.local/
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+dist/
+
+design/
+*.log
