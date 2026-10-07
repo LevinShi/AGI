@@ -1,10 +1,11 @@
-import { mkdir, cp, writeFile, realpath, rm } from 'node:fs/promises';
+import { mkdir, cp, writeFile, realpath, rm, readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 if (process.platform !== 'darwin') throw new Error('This native desktop build requires macOS.');
 const release = process.argv.includes('--release');
+const { version } = JSON.parse(await readFile(resolve(root,'package.json'),'utf8'));
 const app = resolve(root, release ? 'dist/release/Quota Desk.app' : 'dist/Quota Desk.app'), contents = resolve(app, 'Contents'), resources = resolve(contents, 'Resources');
 if (release) await rm(app, { recursive: true, force: true });
 await mkdir(resolve(contents, 'MacOS'), { recursive: true });
@@ -30,7 +31,7 @@ if (release) {
 } else {
   await writeFile(resolve(resources, 'runtime.json'), JSON.stringify({ node: await realpath(process.execPath), legacyData: resolve(root, '.local/quotas.json'), smokeData: resolve(root, '.local/desktop-smoke'), smokeOutput: resolve(root, 'design/native-qa'), ...(codex ? { codex } : {}) }));
 }
-await writeFile(resolve(contents, 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleName</key><string>Quota Desk</string><key>CFBundleDisplayName</key><string>Quota Desk</string><key>CFBundleIdentifier</key><string>local.quota-desk</string><key>CFBundleExecutable</key><string>QuotaDesk</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>0.5.0</string><key>CFBundleVersion</key><string>5</string><key>CFBundleIconFile</key><string>QuotaDesk.icns</string><key>LSMinimumSystemVersion</key><string>13.0</string><key>LSUIElement</key><false/><key>NSHighResolutionCapable</key><true/><key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>`);
+await writeFile(resolve(contents, 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleName</key><string>Quota Desk</string><key>CFBundleDisplayName</key><string>Quota Desk</string><key>CFBundleIdentifier</key><string>local.quota-desk</string><key>CFBundleExecutable</key><string>QuotaDesk</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>${version}</string><key>CFBundleVersion</key><string>6</string><key>CFBundleIconFile</key><string>QuotaDesk.icns</string><key>LSMinimumSystemVersion</key><string>13.0</string><key>LSUIElement</key><false/><key>NSHighResolutionCapable</key><true/><key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>`);
 const iconset = resolve(root, '.local/QuotaDesk.iconset');
 execFileSync('/usr/bin/swift', ['-module-cache-path', resolve(root, '.local/swift-cache'), resolve(root, 'scripts/draw-icon.swift'), iconset], { stdio: 'inherit' });
 execFileSync('/usr/bin/iconutil', ['-c', 'icns', iconset, '-o', resolve(resources, 'QuotaDesk.icns')]);

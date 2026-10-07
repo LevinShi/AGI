@@ -81,7 +81,9 @@ export function projectAccount(account, now = Date.now()) {
   const pools = (account.pools || []).map(p => {
     const percent = percentOf(p);
     const boundaryPassed = p.resetsAt && Date.parse(p.resetsAt) <= now;
-    const freshness = boundaryPassed ? 'awaiting_refresh' : stale ? 'stale' : 'current';
+    const poolObserved = Date.parse(p.observedAt ?? account.observedAt);
+    const poolStale = stale || p.refreshFailed === true || !Number.isFinite(poolObserved) || now - poolObserved > ttl || poolObserved > now + 60_000;
+    const freshness = boundaryPassed ? 'awaiting_refresh' : poolStale ? 'stale' : 'current';
     return { ...p, bucket: bucketOf(p), percent, freshness, low: percent !== null && percent < 20 && freshness === 'current' };
   });
   const cells = Object.fromEntries(BUCKETS.map(bucket => {
@@ -90,7 +92,7 @@ export function projectAccount(account, now = Date.now()) {
   }));
   // Earliest reset concerns one quota pool, never full-account restoration.
   const resets = pools.filter(p => p.boundaryKind !== 'expiry' && p.resetsAt && Number.isFinite(Date.parse(p.resetsAt))).sort((a, b) => Date.parse(a.resetsAt) - Date.parse(b.resetsAt));
-  return { ...account, cells, pools, extraPools: pools.filter(p => p.bucket === 'other'), stale, low: pools.some(p => p.low), nextReset: resets[0] || null, hasUnknown: BUCKETS.some(b => cells[b].state === 'unknown' || cells[b].pools.some(p => p.percent === null)), needsAttention: stale || pools.some(p => p.low || p.freshness === 'awaiting_refresh') || ['error', 'auth_required'].includes(account.connection?.status) };
+  return { ...account, cells, pools, extraPools: pools.filter(p => p.bucket === 'other'), stale, low: pools.some(p => p.low), nextReset: resets[0] || null, hasUnknown: BUCKETS.some(b => cells[b].state === 'unknown' || cells[b].pools.some(p => p.percent === null)), needsAttention: stale || pools.some(p => p.low || p.freshness !== 'current') || ['error', 'auth_required'].includes(account.connection?.status) };
 }
 
 function shortText(value, max = 100) { return typeof value === 'string' ? value.replace(/[\u0000-\u001f]/g, '').slice(0, max) : ''; }
@@ -109,6 +111,8 @@ export function cleanAccount(input) {
     if (seen.has(id)) throw new Error('额度池标识重复');
     seen.add(id);
     const out = { id, label: shortText(p.label || '额度'), bucket: bucketOf(p), scope: shortText(p.scope), unit: shortText(p.unit, 20), resetsAt: isoTime(p.resetsAt), boundaryKind: ['reset', 'expiry', 'unknown'].includes(p.boundaryKind) ? p.boundaryKind : 'unknown' };
+    if (Object.hasOwn(p, 'observedAt')) out.observedAt = isoTime(p.observedAt);
+    if (p.refreshFailed === true) out.refreshFailed = true;
     if (p.period) out.period = shortText(p.period, 30);
     for (const key of ['remainingPercent', 'usedPercent', 'usedRatio', 'remaining', 'used', 'limit', 'windowMinutes']) {
       if (p[key] == null) continue;

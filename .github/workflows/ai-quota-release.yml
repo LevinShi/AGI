@@ -27,9 +27,9 @@ jobs:
           npm run export:source
           codesign --verify --deep --strict 'dist/release/Quota Desk.app'
           'dist/release/Quota Desk.app/Contents/Resources/runtime/bin/node' --version
-          ditto -c -k --norsrc --noextattr --keepParent dist/source/quota-desk dist/release/QuotaDesk-v0.5.0-source.zip
+          ditto -c -k --norsrc --noextattr --keepParent dist/source/quota-desk dist/release/QuotaDesk-v0.5.1-source.zip
           cd dist/release
-          shasum -a 256 QuotaDesk-v0.5.0-macos-arm64.zip QuotaDesk-v0.5.0-source.zip > SHA256SUMS
+          shasum -a 256 QuotaDesk-v0.5.1-macos-arm64.zip QuotaDesk-v0.5.1-source.zip > SHA256SUMS
       - name: Upload verified artifacts and publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,12 +37,12 @@ jobs:
           BUILD_COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
-          tag=ai-quota-v0.5.0
-          release_id=$(gh api "repos/$GH_REPO/releases" --jq '.[] | select(.draft == true and .name == "AI Quota v0.5.0 — macOS") | .id' | head -1)
+          tag=ai-quota-v0.5.1
+          release_id=$(gh api "repos/$GH_REPO/releases" --jq '.[] | select(.draft == true and .name == "AI Quota v0.5.1 — macOS") | .id' | head -1)
           if [ -n "$release_id" ]; then
             gh api --method PATCH "repos/$GH_REPO/releases/$release_id" -f tag_name="$tag" -f target_commitish="$BUILD_COMMIT" -F draft=true > /dev/null
           elif ! gh release view "$tag" > /dev/null 2>&1; then
-            gh release create "$tag" --target "$BUILD_COMMIT" --title 'AI Quota v0.5.0 — macOS' --draft --notes-file RELEASE_NOTES.md
+            gh release create "$tag" --target "$BUILD_COMMIT" --title 'AI Quota v0.5.1 — macOS' --draft --notes-file RELEASE_NOTES.md
           fi
-          gh release upload "$tag" dist/release/QuotaDesk-v0.5.0-macos-arm64.zip dist/release/QuotaDesk-v0.5.0-source.zip dist/release/SHA256SUMS --clobber
+          gh release upload "$tag" dist/release/QuotaDesk-v0.5.1-macos-arm64.zip dist/release/QuotaDesk-v0.5.1-source.zip dist/release/SHA256SUMS --clobber
           gh release edit "$tag" --notes-file RELEASE_NOTES.md --draft=false --latest

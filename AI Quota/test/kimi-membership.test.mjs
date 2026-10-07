@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { decodeKimiMembership, fetchKimiAccount, validateKimiDesktopToken } from '../src/kimi-membership.mjs';
-import { percentOf } from '../src/domain.js';
+import { percentOf, cleanAccount, projectAccount } from '../src/domain.js';
 import { initialAccounts } from '../src/catalog.js';
 import { AdapterError, decodeKimi } from '../src/adapters.mjs';
 
@@ -52,9 +52,16 @@ test('Kimi fallback never refreshes an old monthly snapshot with a new timestamp
       window: { unit: 'week', duration: 1 }, used: 10, limit: 100, reset_at: '2030-06-06T08:00:00Z'
     } } }, now + 86_400_000)
   });
-  assert.equal(result.pools.some(pool => pool.bucket === 'month'), false);
+  assert.equal(result.pools.filter(pool => pool.bucket === 'month').length, 1);
+  assert.equal(percentOf(result.pools[0]), 75);
+  assert.equal(result.pools[0].observedAt, previous.observedAt);
+  assert.equal(result.pools[0].refreshFailed, true);
+  const view = projectAccount(cleanAccount(result), now + 86_400_000);
+  assert.equal(view.cells.month.pools[0].freshness, 'stale');
+  assert.equal(view.cells.week.pools[0].freshness, 'awaiting_refresh');
+  assert.equal(view.needsAttention, true);
   assert.equal(result.coverage.month, 'unknown');
-  assert.match(result.connection.message, /月度总量暂不可用/);
+  assert.match(result.connection.message, /月度总量更新失败/);
 });
 
 test('Kimi rejects missing, expired, malformed and newline-containing local tokens', () => {
@@ -65,4 +72,46 @@ test('Kimi rejects missing, expired, malformed and newline-containing local toke
   assert.equal(validateKimiDesktopToken(undefined, now), false);
   assert.equal(validateKimiDesktopToken('invalid', now), false);
   assert.equal(validateKimiDesktopToken(`${token(now / 1000 + 120)}\n`, now), false);
+});
+
+const codeSnapshot = (old, time) => decodeKimi(old, { code: 0, data: { kind: 'ok', summary: {
+  window: { unit: 'week', duration: 1 }, used: 10, limit: 100, reset_at: new Date(time + 86_400_000).toISOString()
+}, limits: [{ window: { unit: 'hour', duration: 5 }, used: 5, limit: 100 }] } }, time);
+const unavailable = async () => { throw new AdapterError('登录失效', 'auth'); };
+
+test('repeated Code fallback and persistence cannot advance the cached monthly timestamp', async () => {
+  const previous = decodeKimiMembership(account, payload, now);
+  const first = cleanAccount(await fetchKimiAccount(previous, { membership: unavailable, code: async old => codeSnapshot(old, now + 1000) }));
+  const second = cleanAccount(await fetchKimiAccount(first, { membership: unavailable, code: async old => codeSnapshot(old, now + 2000) }));
+  assert.equal(second.pools[0].observedAt, previous.observedAt);
+  assert.equal(second.pools[0].refreshFailed, true);
+  const view = projectAccount(second, now + 2000);
+  assert.equal(view.cells.month.pools[0].freshness, 'stale');
+  assert.equal(view.cells.week.pools[0].freshness, 'current');
+  assert.equal(view.cells.h5.pools[0].freshness, 'current');
+  const recovered = await fetchKimiAccount(second, { membership: async old => decodeKimiMembership(old, payload, now + 3000), code: async () => { throw new Error('must not run'); } });
+  assert.equal(recovered.pools[0].refreshFailed, undefined);
+  assert.equal(recovered.pools[0].observedAt, new Date(now + 3000).toISOString());
+  assert.equal(projectAccount(recovered, now + 3000).cells.month.pools[0].freshness, 'current');
+});
+
+test('without any monthly history, the total remains explicitly unknown alongside fresh Code windows', async () => {
+  const result = cleanAccount(await fetchKimiAccount(account, { membership: unavailable, code: async old => codeSnapshot(old, now) }));
+  const view = projectAccount(result, now);
+  assert.equal(view.cells.month.pools.length, 1);
+  assert.equal(view.cells.month.pools[0].percent, null);
+  assert.equal(view.cells.week.pools[0].percent, 90);
+  assert.equal(view.cells.h5.pools[0].percent, 95);
+  assert.equal(view.needsAttention, true);
+  assert.match(result.connection.message, /月度总量待读取/);
+});
+
+test('desktop login expiry uses browser membership without falling back to Code-only usage', async () => {
+  const { fetchKimiMembership } = await import('../src/kimi-membership.mjs');
+  let browserCalls = 0;
+  const result = await fetchKimiMembership(account, { desktop: unavailable, browser: async old => { browserCalls++; return decodeKimiMembership(old, payload, now); } });
+  assert.equal(browserCalls, 1);
+  assert.equal(percentOf(result.pools[0]), 75);
+  await assert.rejects(fetchKimiMembership(account, { desktop: async () => { throw new AdapterError('限流', 'rate_limit'); }, browser: async () => { browserCalls++; } }), { code: 'rate_limit' });
+  assert.equal(browserCalls, 1);
 });
