@@ -1,50 +1,49 @@
-# Research OS Core RC1
+# deep-research · 让研究结论经得起追问
 
-Research OS Core is a minimal, evidence-governed workflow for research where a cheap extraction pass must not silently lower decision quality.
+**不只让 AI 写一份报告，还要让它交代：证据在哪里，反例查过没有，还有什么不知道。**
 
-## It solves
+当研究会影响产品、市场或业务决策，一篇流畅的总结并不够。这个 Codex 技能包把来源检查、原文核对和反证搜索加入研究流程，让你更容易判断结论能不能用。
 
-- **Missed coverage:** a Ledger can look complete while an expected source category was never checked.
-- **Evidence drift:** a weak worker can turn plans, claims, or reposts into stronger facts than the source supports.
-- **Confirmation bias and runaway work:** support evidence can stop the search too early, while unresolved tasks can loop between agents.
+当前是 **Research OS Core RC1**：一套研究工作流与模板，不是独立App，也不附带模型或搜索服务。
 
-## The solution
+## 你会得到什么
 
-`1 Director (Sol) + 1 Researcher persona + 2 phases (Research → Judge) + 1 Evidence Ledger`
+- 一份先给判断、再讲决定性依据的报告。
+- 一份可追溯的证据账本：原文、链接、日期与定位。
+- 明确留下的未知项，以及它们可能怎样改变结论。
 
-Sol fixes the Charter, Expected Source Map, QIDs, and L/T/S routes in one batch. Luna/Terra Researcher instances are read-only and return only `DONE` or `UNCERTAIN`; they extract verbatim fragments from both support and counter searches without judging claim direction or reliability. Sol appends the returned text, rereads decisive evidence, randomly audits non-decisive evidence, records Unknowns, and may run one bounded repair round.
+例如你问“这个品牌值得进入某个市场吗？”，工作流会要求既找支持材料，也找失败案例和口径冲突，而不是只收集看起来利好的信息。**这是使用示例，不是已完成的研究结果。**
 
-The four non-negotiable gates are **Coverage, Fidelity, Disconfirmation, and Unknown**. A report is called `Quality-Passed` only when all four pass. There is no default Verifier, Plan Critic, Lane Memo, Compliance Agent, Red Team, benchmark, or forced A/B test.
+`明确决策 → 双向找证据 → 回读核查 → 给出结论与未知项`
 
-## Files
+## 怎么开始
 
-- `SKILL.md` — Director workflow and RC1 invariants.
-- `researcher.toml` — the single read-only Researcher persona; model is deliberately selected per QID by Sol.
-- `evidence.md` — append-only Ledger template for Charter, worker batches, Judge checks, repairs, and Unknowns.
-
-## Installation
-
-### User installation
-
-1. Copy this folder to `~/.codex/skills/deep-research/`.
-2. Copy `researcher.toml` to `~/.codex/agents/researcher.toml` for a personal agent, or to the project’s `.codex/agents/researcher.toml` for a project-scoped agent.
-3. Keep `evidence.md` as a template; copy it into each research project before starting a run.
-
-The custom agent file must remain read-only. Do not add a model field to it: Sol must explicitly choose `gpt-5.6-luna` or `gpt-5.6-terra` for each QID.
-
-### Agent invocation
-
-Run the Director on `gpt-5.6-sol` and invoke:
+1. 先看[安装与配置](docs/SETUP.md)：当前版本有明确的模型与自定义研究Agent要求，不满足时不能直接运行。
+2. 安装技能与研究Agent，每个项目复制一份 `evidence.md` 作为工作账本。
+3. 对符合配置的主Agent说：
 
 ```text
-Use $deep-research for: [decision question]
-Reader/decision: [who will act and what decision follows]
-Scope: [geography, period, channel, definitions, exclusions]
-Output: conclusion first, with Evidence IDs, boundaries, and unresolved Unknowns
+用 $deep-research 研究：这个品牌是否值得进入目标市场？
+我要据此决定是否投入下一轮调研。
+范围：指定地区、近两年、明确品类。
+请先给判断，附关键证据、反例和未解决的问题。
 ```
 
-The agent creates the Charter inside the Ledger, routes QIDs in one batch, performs Research → Judge, and stops after one default bounded repair round. It must disclose any missing agent configuration or failed quality gate.
+## 四个常见问题
 
-## Privacy boundary
+**与直接说“帮我深度研究”有什么不同？** 它规定必须检查来源覆盖、核对原文、搜索反证、保留未知项。只有四项都通过，才允许标记质量通过；这仍不是事实绝对正确的保证。
 
-This package contains no personal paths, account identifiers, credentials, or project-specific research data. Keep source URLs, excerpts, and business-sensitive material in the project’s working Ledger, not in the reusable skill files.
+**会不会一直研究下去？** 默认最多做一轮针对缺口的回补。仍解决不了的内容记为未知，而不是让多个Agent无限往返。
+
+**所有 Codex 用户都能直接用吗？** 不能保证。当前配置固定使用 `gpt-5.6-sol/luna/terra`，还需安装只读 `researcher` Agent；先核对你的环境是否提供这些模型。模型不可用时需要先适配，不应静默换模型后声称符合RC1。
+
+**什么时候不值得用？** 简单事实查询、一般改稿不必走整套流程。适合需要核对证据和反例的复杂判断；模型与搜索成本由你的环境承担，本包不承诺固定费用或节省比例。
+
+## 文件很少，各司其职
+
+- [SKILL.md](SKILL.md)：主Agent如何组织研究、何时判定完成。
+- [researcher.toml](researcher.toml)：只读研究Agent配置。
+- [evidence.md](evidence.md)：可复制的证据账本模板。
+- [docs/SETUP.md](docs/SETUP.md)：安装、调用与配置限制。
+
+研究中的真实材料只放在项目工作账本里，不要写回公开模板。三个运行文件保留在根目录，安装时保持相对位置。
